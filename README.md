@@ -9,6 +9,8 @@ Backend (Spring Boot + JWT + Swagger + H2): https://github.com/dast2003/sistema-
 - **Login**: email y contrasena; si el token expira, vuelve aqui con un aviso.
 - **Registro**: nombre, apellido, documento, email y contrasena (mismas validaciones que el backend).
 - **Panel**: saldo total, mis cuentas, abrir cuenta, depositar, retirar, transferir e historial de movimientos.
+- **Beneficiarios** (en el panel): inscribir cuentas con un alias, ver el titular parcial para confirmar y transferirles
+  sin digitar el numero.
 
 ## Ejecutar
 

@@ -1,11 +1,12 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { AuthService } from '../../core/auth.service';
 import { BancoService } from '../../core/banco.service';
 import { mensajeError } from '../../core/errores';
-import { Cuenta, TipoCuenta, TipoTransaccion, Transaccion } from '../../core/models';
+import { Beneficiario, Cuenta, TipoCuenta, TipoTransaccion, Transaccion } from '../../core/models';
 
 type Operacion = 'deposito' | 'retiro' | 'transferencia';
 
@@ -32,6 +33,9 @@ export class Panel implements OnInit {
   readonly cuentas = signal<Cuenta[]>([]);
   readonly seleccionada = signal<Cuenta | null>(null);
   readonly movimientos = signal<Transaccion[]>([]);
+  readonly beneficiarios = signal<Beneficiario[]>([]);
+  readonly mostrarNuevoBeneficiario = signal(false);
+  readonly guardandoBeneficiario = signal(false);
   readonly operacion = signal<Operacion>('deposito');
   readonly cargando = signal(true);
   readonly procesando = signal(false);
@@ -53,8 +57,74 @@ export class Panel implements OnInit {
     descripcion: this.fb.nonNullable.control('', Validators.maxLength(200)),
   });
 
+  private readonly destino = toSignal(this.form.controls.cuentaDestino.valueChanges, { initialValue: '' });
+
+  readonly formBeneficiario = this.fb.nonNullable.group({
+    alias: ['', [Validators.required, Validators.maxLength(40)]],
+    numeroCuenta: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+  });
+
+  /** Beneficiario que coincide con la cuenta digitada, para confirmar a quien se le envia. */
+  readonly destinoInscrito = computed(() => this.beneficiarios().find((b) => b.numeroCuenta === this.destino()) ?? null);
+
   ngOnInit(): void {
     this.cargarCuentas();
+    this.cargarBeneficiarios();
+  }
+
+  cargarBeneficiarios(): void {
+    this.banco.beneficiarios().subscribe({
+      next: (lista) => this.beneficiarios.set(lista),
+      error: (err) => this.mostrarAviso('error', mensajeError(err)),
+    });
+  }
+
+  inscribirBeneficiario(): void {
+    if (this.formBeneficiario.invalid) {
+      this.formBeneficiario.markAllAsTouched();
+      return;
+    }
+    this.guardandoBeneficiario.set(true);
+    this.banco.inscribirBeneficiario(this.formBeneficiario.getRawValue()).subscribe({
+      next: (b) => {
+        this.mostrarAviso('ok', `${b.alias} (${b.titular}) quedo inscrito como beneficiario.`);
+        this.formBeneficiario.reset();
+        this.mostrarNuevoBeneficiario.set(false);
+        this.guardandoBeneficiario.set(false);
+        this.cargarBeneficiarios();
+      },
+      error: (err) => {
+        this.mostrarAviso('error', mensajeError(err));
+        this.guardandoBeneficiario.set(false);
+      },
+    });
+  }
+
+  eliminarBeneficiario(b: Beneficiario): void {
+    if (!confirm(`¿Eliminar a ${b.alias} de tus beneficiarios?`)) return;
+    this.banco.eliminarBeneficiario(b.id).subscribe({
+      next: () => {
+        this.mostrarAviso('ok', `${b.alias} fue eliminado de tus beneficiarios.`);
+        this.cargarBeneficiarios();
+      },
+      error: (err) => this.mostrarAviso('error', mensajeError(err)),
+    });
+  }
+
+  /** Lleva al formulario de transferencia con la cuenta del beneficiario ya escrita. */
+  transferirA(b: Beneficiario): void {
+    this.cambiarOperacion('transferencia');
+    this.form.controls.cuentaDestino.setValue(b.numeroCuenta);
+    document.getElementById('monto')?.focus();
+  }
+
+  elegirDestino(numero: string): void {
+    this.form.controls.cuentaDestino.setValue(numero);
+  }
+
+  invalidoBeneficiario(campo: 'alias' | 'numeroCuenta'): boolean {
+    const c = this.formBeneficiario.controls[campo];
+    return c.invalid && c.touched;
   }
 
   cargarCuentas(numeroASeleccionar?: string): void {

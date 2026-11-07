@@ -61,6 +61,19 @@ export interface TransferenciaRequest {
   descripcion?: string;
 }
 
+export interface Beneficiario {
+  id: number;
+  alias: string;
+  numeroCuenta: string;
+  tipoCuenta: TipoCuenta;
+  titular: string;
+}
+
+export interface BeneficiarioRequest {
+  alias: string;
+  numeroCuenta: string;
+}
+
 export interface ApiError {
   status: number;
   error: string;

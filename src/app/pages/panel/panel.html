@@ -61,6 +61,58 @@
           </div>
         </section>
 
+        <!-- Beneficiarios -->
+        <section class="card">
+          <div class="mb-4 flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold text-slate-900">Beneficiarios</h2>
+            <button type="button" class="btn-secondary" (click)="mostrarNuevoBeneficiario.set(!mostrarNuevoBeneficiario())">+ Inscribir</button>
+          </div>
+
+          @if (mostrarNuevoBeneficiario()) {
+            <form class="mb-4 grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
+                  [formGroup]="formBeneficiario" (ngSubmit)="inscribirBeneficiario()" novalidate>
+              <div>
+                <label class="label" for="alias">Alias</label>
+                <input id="alias" maxlength="40" class="input" [class.input-error]="invalidoBeneficiario('alias')"
+                       formControlName="alias" placeholder="Ej: Arrendador" />
+                @if (invalidoBeneficiario('alias')) { <p class="field-error">El alias es obligatorio.</p> }
+              </div>
+              <div>
+                <label class="label" for="numeroCuenta">Numero de cuenta</label>
+                <input id="numeroCuenta" inputmode="numeric" maxlength="10" class="input font-mono"
+                       [class.input-error]="invalidoBeneficiario('numeroCuenta')" formControlName="numeroCuenta" placeholder="10 digitos" />
+                @if (invalidoBeneficiario('numeroCuenta')) { <p class="field-error">El numero de cuenta tiene 10 digitos.</p> }
+              </div>
+              <button type="submit" class="btn-primary sm:mt-6" [disabled]="guardandoBeneficiario()">
+                {{ guardandoBeneficiario() ? 'Guardando...' : 'Guardar' }}
+              </button>
+            </form>
+          }
+
+          @if (beneficiarios().length === 0) {
+            <p class="py-4 text-center text-sm text-slate-500">
+              Inscribe las cuentas a las que transfieres seguido para no digitarlas cada vez.
+            </p>
+          } @else {
+            <ul class="divide-y divide-slate-100">
+              @for (b of beneficiarios(); track b.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                  <div class="min-w-0">
+                    <p class="truncate font-medium text-slate-800">{{ b.alias }}</p>
+                    <p class="text-xs text-slate-500">
+                      {{ b.titular }} · <span class="font-mono">{{ b.numeroCuenta }}</span> · {{ nombreTipo(b.tipoCuenta) }}
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button type="button" class="text-sm font-semibold text-emerald-700 hover:underline" (click)="transferirA(b)">Transferir</button>
+                    <button type="button" class="text-sm text-slate-500 hover:text-red-600" (click)="eliminarBeneficiario(b)">Eliminar</button>
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        </section>
+
         <!-- Movimientos -->
         <section class="card">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -131,11 +183,25 @@
             </p>
 
             @if (operacion() === 'transferencia') {
+              @if (beneficiarios().length > 0) {
+                <div>
+                  <label class="label" for="beneficiario">Beneficiario</label>
+                  <select #selector id="beneficiario" class="input" (change)="elegirDestino(selector.value)">
+                    <option value="" [selected]="!destinoInscrito()">Otra cuenta (digitar numero)</option>
+                    @for (b of beneficiarios(); track b.id) {
+                      <option [value]="b.numeroCuenta" [selected]="b.id === destinoInscrito()?.id">{{ b.alias }} - {{ b.titular }}</option>
+                    }
+                  </select>
+                </div>
+              }
               <div>
                 <label class="label" for="destino">Cuenta destino</label>
                 <input id="destino" inputmode="numeric" maxlength="10" class="input font-mono" [class.input-error]="invalido('cuentaDestino')"
                        formControlName="cuentaDestino" placeholder="10 digitos" />
                 @if (invalido('cuentaDestino')) { <p class="field-error">El numero de cuenta tiene 10 digitos.</p> }
+                @if (destinoInscrito(); as d) {
+                  <p class="mt-1 text-xs text-emerald-700">Titular: {{ d.titular }} ({{ d.alias }})</p>
+                }
               </div>
             }
 
