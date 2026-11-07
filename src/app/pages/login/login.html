@@ -1,0 +1,53 @@
+<main class="flex min-h-screen items-center justify-center px-4 py-10">
+  <div class="w-full max-w-md">
+    <div class="mb-8 text-center">
+      <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-700 text-2xl font-bold text-white">B</div>
+      <h1 class="text-2xl font-bold text-slate-900">Banco Practica</h1>
+      <p class="mt-1 text-sm text-slate-500">Ingresa para ver y mover tu dinero</p>
+    </div>
+
+    <form class="card space-y-5" [formGroup]="form" (ngSubmit)="enviar()" novalidate>
+      @if (sesion() === 'expirada') {
+        <p class="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 ring-1 ring-amber-200">
+          Tu sesion expiro. Vuelve a iniciar sesion.
+        </p>
+      }
+      @if (error()) {
+        <p class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 ring-1 ring-red-200" role="alert">{{ error() }}</p>
+      }
+
+      <div>
+        <label class="label" for="email">Correo electronico</label>
+        <input id="email" type="email" autocomplete="email" class="input" [class.input-error]="invalido('email')"
+               formControlName="email" placeholder="tu@correo.com" />
+        @if (invalido('email')) {
+          <p class="field-error">Ingresa un correo valido.</p>
+        }
+      </div>
+
+      <div>
+        <label class="label" for="password">Contrasena</label>
+        <div class="relative">
+          <input id="password" [type]="verPassword() ? 'text' : 'password'" autocomplete="current-password"
+                 class="input pr-16" [class.input-error]="invalido('password')" formControlName="password" />
+          <button type="button" class="absolute inset-y-0 right-0 px-3 text-xs font-medium text-slate-500 hover:text-slate-800"
+                  (click)="verPassword.set(!verPassword())">
+            {{ verPassword() ? 'Ocultar' : 'Ver' }}
+          </button>
+        </div>
+        @if (invalido('password')) {
+          <p class="field-error">La contrasena es obligatoria.</p>
+        }
+      </div>
+
+      <button type="submit" class="btn-primary w-full" [disabled]="cargando()">
+        {{ cargando() ? 'Ingresando...' : 'Iniciar sesion' }}
+      </button>
+
+      <p class="text-center text-sm text-slate-600">
+        ¿No tienes cuenta?
+        <a routerLink="/registro" class="font-semibold text-emerald-700 hover:underline">Registrate</a>
+      </p>
+    </form>
+  </div>
+</main>

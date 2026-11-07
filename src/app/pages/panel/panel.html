@@ -1,0 +1,164 @@
+<header class="border-b border-slate-200 bg-white">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-3">
+      <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-700 font-bold text-white">B</div>
+      <span class="font-semibold text-slate-900">Banco Practica</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span class="hidden text-sm text-slate-600 sm:inline">Hola, <strong>{{ usuario()?.nombre }}</strong></span>
+      <button type="button" class="btn-secondary" (click)="logout()">Cerrar sesion</button>
+    </div>
+  </div>
+</header>
+
+<main class="mx-auto max-w-6xl px-4 py-8">
+  @if (cargando()) {
+    <p class="text-center text-slate-500">Cargando tus cuentas...</p>
+  } @else {
+    <!-- Resumen -->
+    <section class="mb-6 rounded-2xl bg-gradient-to-r from-emerald-800 to-emerald-600 p-6 text-white shadow">
+      <p class="text-sm text-emerald-100">Saldo total</p>
+      <p class="mt-1 text-3xl font-bold tracking-tight">{{ saldoTotal() | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</p>
+      <p class="mt-2 text-sm text-emerald-100">{{ cuentas().length }} {{ cuentas().length === 1 ? 'cuenta' : 'cuentas' }} a tu nombre</p>
+    </section>
+
+    @if (aviso(); as a) {
+      <div class="mb-6 flex items-start justify-between gap-4 rounded-lg px-4 py-3 text-sm ring-1"
+           [class]="a.tipo === 'ok' ? 'bg-emerald-50 text-emerald-800 ring-emerald-200' : 'bg-red-50 text-red-700 ring-red-200'"
+           role="status">
+        <span>{{ a.texto }}</span>
+        <button type="button" class="font-bold opacity-60 hover:opacity-100" (click)="aviso.set(null)" aria-label="Cerrar">×</button>
+      </div>
+    }
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <div class="space-y-6 lg:col-span-2">
+        <!-- Cuentas -->
+        <section>
+          <div class="mb-3 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-slate-900">Mis cuentas</h2>
+            <button type="button" class="btn-secondary" (click)="mostrarNuevaCuenta.set(!mostrarNuevaCuenta())">+ Abrir cuenta</button>
+          </div>
+
+          @if (mostrarNuevaCuenta()) {
+            <div class="card mb-4 flex flex-wrap items-center gap-3">
+              <span class="text-sm text-slate-600">¿Que tipo de cuenta quieres abrir?</span>
+              <button type="button" class="btn-primary" (click)="abrirCuenta('AHORROS')">Ahorros</button>
+              <button type="button" class="btn-primary" (click)="abrirCuenta('CORRIENTE')">Corriente</button>
+            </div>
+          }
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            @for (c of cuentas(); track c.id) {
+              <button type="button" (click)="seleccionar(c)"
+                      class="rounded-2xl bg-white p-5 text-left shadow-sm ring-1 transition hover:shadow-md"
+                      [class]="seleccionada()?.id === c.id ? 'ring-2 ring-emerald-600' : 'ring-slate-200'">
+                <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Cuenta {{ nombreTipo(c.tipo) }}</p>
+                <p class="mt-1 font-mono text-sm text-slate-600">N° {{ c.numero }}</p>
+                <p class="mt-3 text-2xl font-bold text-slate-900">{{ c.saldo | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}</p>
+              </button>
+            }
+          </div>
+        </section>
+
+        <!-- Movimientos -->
+        <section class="card">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold text-slate-900">Movimientos</h2>
+            @if (seleccionada(); as s) {
+              <button type="button" class="font-mono text-sm text-slate-500 hover:text-emerald-700" (click)="copiarNumero(s.numero)"
+                      title="Copiar numero de cuenta">
+                {{ copiado() ? '¡Copiado!' : 'N° ' + s.numero + ' ⧉' }}
+              </button>
+            }
+          </div>
+
+          @if (movimientos().length === 0) {
+            <p class="py-8 text-center text-sm text-slate-500">Esta cuenta aun no tiene movimientos. Haz tu primer deposito.</p>
+          } @else {
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <th class="py-2 pr-4 font-medium">Fecha</th>
+                    <th class="py-2 pr-4 font-medium">Detalle</th>
+                    <th class="py-2 pr-4 text-right font-medium">Monto</th>
+                    <th class="py-2 text-right font-medium">Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (m of movimientos(); track m.id) {
+                    <tr class="border-b border-slate-100 last:border-0">
+                      <td class="whitespace-nowrap py-3 pr-4 text-slate-500">{{ m.fecha | date: 'dd/MM/yyyy HH:mm' }}</td>
+                      <td class="py-3 pr-4">
+                        <p class="font-medium text-slate-800">{{ etiqueta(m.tipo) }}</p>
+                        @if (m.descripcion) { <p class="text-xs text-slate-500">{{ m.descripcion }}</p> }
+                      </td>
+                      <td class="whitespace-nowrap py-3 pr-4 text-right font-semibold"
+                          [class]="esEntrada(m.tipo) ? 'text-emerald-700' : 'text-red-600'">
+                        {{ esEntrada(m.tipo) ? '+' : '−' }}{{ m.monto | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+                      </td>
+                      <td class="whitespace-nowrap py-3 text-right text-slate-600">
+                        {{ m.saldoResultante | currency: 'COP' : 'symbol-narrow' : '1.0-2' }}
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+
+      <!-- Operaciones -->
+      <aside class="card h-fit">
+        <h2 class="mb-4 text-lg font-semibold text-slate-900">Operaciones</h2>
+
+        <div class="mb-5 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1">
+          @for (op of operaciones; track op.id) {
+            <button type="button" class="rounded-md py-1.5 text-sm font-medium transition"
+                    [class]="operacion() === op.id ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-600 hover:text-slate-900'"
+                    (click)="cambiarOperacion(op.id)">
+              {{ op.texto }}
+            </button>
+          }
+        </div>
+
+        @if (seleccionada(); as s) {
+          <form class="space-y-4" [formGroup]="form" (ngSubmit)="ejecutar()" novalidate>
+            <p class="text-sm text-slate-600">
+              {{ operacion() === 'deposito' ? 'Hacia' : 'Desde' }} la cuenta <span class="font-mono font-semibold">{{ s.numero }}</span>
+            </p>
+
+            @if (operacion() === 'transferencia') {
+              <div>
+                <label class="label" for="destino">Cuenta destino</label>
+                <input id="destino" inputmode="numeric" maxlength="10" class="input font-mono" [class.input-error]="invalido('cuentaDestino')"
+                       formControlName="cuentaDestino" placeholder="10 digitos" />
+                @if (invalido('cuentaDestino')) { <p class="field-error">El numero de cuenta tiene 10 digitos.</p> }
+              </div>
+            }
+
+            <div>
+              <label class="label" for="monto">Monto (COP)</label>
+              <input id="monto" type="number" min="0.01" step="0.01" class="input" [class.input-error]="invalido('monto')"
+                     formControlName="monto" placeholder="0" />
+              @if (invalido('monto')) { <p class="field-error">Ingresa un monto mayor a cero.</p> }
+            </div>
+
+            <div>
+              <label class="label" for="descripcion">Descripcion <span class="font-normal text-slate-400">(opcional)</span></label>
+              <input id="descripcion" maxlength="200" class="input" formControlName="descripcion" />
+            </div>
+
+            <button type="submit" class="btn-primary w-full" [disabled]="procesando()">
+              {{ procesando() ? 'Procesando...' : 'Confirmar' }}
+            </button>
+          </form>
+        } @else {
+          <p class="text-sm text-slate-500">Selecciona una cuenta para operar.</p>
+        }
+      </aside>
+    </div>
+  }
+</main>
